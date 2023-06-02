@@ -1,7 +1,36 @@
-from app import app, db
-from flask import render_template, request, redirect, url_for
-from app.models import User
-from flask_login import login_user, logout_user
+from flask import Flask, render_template, request, redirect, url_for
+from flask_login import login_user, logout_user, LoginManager
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+
+app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bancogeral.sqlite3"
+app.config["SECRET_KEY"] = "secret"
+
+login_manager = LoginManager(app)
+
+db = SQLAlchemy(app)
+
+@login_manager.user_loader
+def get_user(user_id):
+    return User.query.filter_by(id=user_id).first()
+
+class User(db.Model, UserMixin):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(50), nullable=False, unique=True)
+    password = db.Column(db.String(128), nullable=False)
+
+    def __init__(self, name, email, password):
+        self.name = name
+        self.email = email
+        self.password = generate_password_hash(password)
+
+    def verify_password(self, pwd):
+        return check_password_hash(self.password, pwd)
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
